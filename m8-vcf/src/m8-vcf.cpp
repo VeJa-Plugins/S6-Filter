@@ -5,8 +5,8 @@
 #include <math.h>
 #include <lv2.h>
 
-#include "VCF.h"
-#include "VCF_24DB.h"
+#include "VoltageControlledFilter12dB.h"
+#include "VoltageControlledFilter24dB.h"
 
 #include "lv2/lv2plug.in/ns/ext/atom/atom.h"
 #include "lv2/lv2plug.in/ns/ext/atom/util.h"
@@ -16,24 +16,30 @@
 
 /**********************************************************************************************************************************************************/
 #define PLUGIN_URI "http://VeJaPlugins.com/plugins/Release/m8vcf"
-#define PI 3.14159265358979323846264338327950288
+
 #define MAX_PORTS 8
 #define MAX_OUTPUT_BUFFER_LENGHT 256
 #define VCF_LOW_PASS_MODE 0
 
+//default defines, can we handle this more gracefully? 
+#define DEFAULT_VCF_CUT_OFF             10000 
+#define DEFAULT_VCF_RESONANCE           0.2
+
+//MAP function used to scale modulation factors
+#define MAP(in_min, in_max, out_min, out_max, x)    (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
+
+using namespace VeJa::Plugins::Filters;
 
 enum{
     INPUT,
-    CvEnvInput,
-    CvLFOInput,
-    CvPitchInput,
+    CvMODInput,
     OUTPUT,
     Resonance,
     CutoffFreq,
     Slope,
-    LFO_MOD,
-    ENV_MOD,
-    PITCH_MOD
+    MOD_C,
+    FIRST_ORDER_TYPE
 };
 
 
@@ -41,9 +47,7 @@ class Mars_8{
 public:
     Mars_8()
     {
-        //filter init
-        VCF_filter = new VCF();
-        VCF_24DB_filter = new VCF_24DB();
+
     }
     ~Mars_8() {}
     static LV2_Handle instantiate(const LV2_Descriptor* descriptor, double samplerate, const char* bundle_path, const LV2_Feature* const* features);
@@ -62,28 +66,29 @@ public:
     const LV2_Atom_Sequence* port_events_in;
     float *input;
     float *output;
-    float *cvenvinput;
-    float *cvlfoinput;
-    float *cvpitchinput;
+    float *cvmodinput;
 
         
     //control ports
     float *resonance;
     float *cutofffreq;
     float *slope;
-    float *lfo_mod;
-    float *env_mod;
-    float *pitch_mod;
+    float *mod_c;
+    float *fot;
 
     //important stuff
     float Tau;
     float sampleRate;
 
-    //VCF filter 12dB
-    VCF * VCF_filter;
+    float prev_resonance;
+    float prev_cutofffreq;
+    float prev_order;
 
-    //VCF filer 24dB
-    VCF_24DB * VCF_24DB_filter;
+    //Voltage Controlled Filter 12dB
+    VoltageControlledFilter12dB<float> * _voltageControlledFIlter12DB;
+
+    //Voltage Controlled Filter 24dB
+    VoltageControlledFilter24dB<float> * _voltageControlledFIlter24DB;
 
 };
 /**********************************************************************************************************************************************************/
@@ -97,14 +102,9 @@ const LV2_Feature* const* features)
 {
     Mars_8* self = new Mars_8();
 
-    //12dB
-    //clear random value's
-    self->VCF_filter->ClearState();
-    //init with default coeffs, 20Khz, 0.5 resonane, Samplefreq of 48Khz
-    self->VCF_filter->SetCoeff(20000, 0.5);
-
-    //24dB
-    self->VCF_24DB_filter->SetCoeff(20000, 0.5);
+    //instantiate voltage controlled filters
+    self->_voltageControlledFIlter12DB = new VoltageControlledFilter12dB<float>(samplerate);
+    self->_voltageControlledFIlter24DB = new VoltageControlledFilter24dB<float>(samplerate);
 
     return (LV2_Handle)self; 
 }
@@ -117,14 +117,8 @@ void Mars_8::connect_port(LV2_Handle instance, uint32_t port, void *data)
         case INPUT:
             self->input = (float*) data;
             break;
-        case CvEnvInput:
-            self->cvenvinput = (float*) data;
-            break;
-        case CvLFOInput:
-            self->cvlfoinput = (float*) data;
-            break;
-        case CvPitchInput:
-            self->cvpitchinput = (float*) data;
+        case CvMODInput:
+            self->cvmodinput = (float*) data;
             break;
         case OUTPUT:
             self->output = (float*) data;
@@ -138,14 +132,11 @@ void Mars_8::connect_port(LV2_Handle instance, uint32_t port, void *data)
         case Slope:
             self->slope = (float*) data;
             break;
-        case LFO_MOD:
-            self->lfo_mod = (float*) data;
+        case MOD_C:
+            self->mod_c = (float*) data;
             break;
-        case ENV_MOD:
-            self->env_mod = (float*) data;
-            break;
-        case PITCH_MOD:
-            self->pitch_mod = (float*) data;
+        case FIRST_ORDER_TYPE:
+            self->fot = (float*) data;
             break;
     }
 }
@@ -158,41 +149,63 @@ void Mars_8::activate(LV2_Handle instance)
 void Mars_8::run(LV2_Handle instance, uint32_t n_samples)
 {
     Mars_8* self = (Mars_8*)instance;
-    float order = *self->slope;
+    uint8_t order = *self->slope;
     float freq  = *self->cutofffreq;
     float res = *self->resonance;
-    float lfo = *self->cvlfoinput;
-    float lfo_slider = *self->lfo_mod;
-    float pitch = *self->cvpitchinput;
-    float pitch_slider = *self->pitch_mod;
-    float env = *self->cvenvinput;
-    float env_slider = *self->env_mod;
+    float mod_control = *self->mod_c;
 
-    //set filters
-    float lfo_modulation = (lfo * (10*lfo_slider));
-    float pitch_modulation = (pitch * (10*pitch_slider));
-    float env_modulation = (env * (10*env_slider));
+    float lfo_vcf_mod = (MAP(0.f, 1.f, -1.f*(mod_control * 10.f), (mod_control * 10.f), self->cvmodinput[0] ) ) ;
+    if (lfo_vcf_mod > 0) lfo_vcf_mod += 1.f;
+    else lfo_vcf_mod = MAP(-1.f, 0.f, 0.5f, 1.f, lfo_vcf_mod);
 
-    float fc = (freq + lfo_modulation + pitch_modulation + env_modulation);
-    //limit value's
-    if (fc < 1) fc =1;
-    if (fc > 20000) fc = 20000;
+    float fc = freq ;
 
-    self->VCF_filter->SetCoeff(fc, res);
-    self->VCF_24DB_filter->SetCoeff((fc + lfo_modulation + pitch_modulation + env_modulation), res);
+    if (mod_control != 0)
+    {
+    	fc = freq * (lfo_vcf_mod) ;
+    }
 
-  	//start audio processing
+    ////limit value's
+    if (fc < 20) 
+    {
+        fc =20.0f;
+    }
+    else if (fc > 20000)
+    {
+        fc = 20000.0f;
+    }
+
+    if (res < 0) res = 0.01f;
+    if (res > 0.99) res = 0.99f;
+
+    if ((res != self->prev_resonance) || (fc != self->prev_cutofffreq) || (order != self->prev_order))
+    {
+    	if (order == 0)
+    	{
+    		self->_voltageControlledFIlter12DB->SetCoefficient(fc, res);
+    	}
+    	else 
+    	{
+    		self->_voltageControlledFIlter24DB->SetCoefficient(fc, res);
+    	}
+
+    	self->prev_order = order;
+    	self->prev_resonance = res;
+    	self->prev_cutofffreq = fc;
+    }
+
+  	////start audio processing
     for(uint32_t i = 0; i < n_samples; i++)
     {
         //12 db
         if (order == 0)
         {
-            self->output[i] = self->VCF_filter->Process(VCF_LOW_PASS_MODE, self->input[i]);
+            self->output[i] = self->_voltageControlledFIlter12DB->Process(self->input[i], *self->fot);
         }
         //24 db
         else 
         {
-            self->output[i] = 3.0f * (self->VCF_24DB_filter->Process(self->input[i]));
+            self->output[i] = 3.0f * (self->_voltageControlledFIlter24DB->Process(self->input[i]));
         }
     }
 }   
