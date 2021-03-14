@@ -1,0 +1,30 @@
+@prefix modgui: <http://moddevices.com/ns/modgui#> .
+@prefix lv2:    <http://lv2plug.in/ns/lv2core#> .
+
+<http://VeJaPlugins.com/plugins/Release/s6Filter>
+    modgui:gui [
+        modgui:resourcesDirectory <modgui> ;
+        modgui:iconTemplate <modgui/icon-s6-filter.html> ;
+        modgui:stylesheet <modgui/stylesheet-s6-filter.css> ;
+        modgui:screenshot <modgui/screenshot-s6-filter.png> ;
+        modgui:thumbnail <modgui/thumbnail-s6-filter.png> ;
+        modgui:brand "VeJa" ;
+        modgui:label "S6 Filtlter" ;
+        modgui:model "boxy" ;
+        modgui:panel "1-select-2-knobs" ;
+        modgui:color "black" ;
+        modgui:knob "purple" ;
+        modgui:port [
+            lv2:index 0 ;
+            lv2:symbol "FIRST_ORDER_TYPE" ;
+            lv2:name "Type" ;
+        ] , [
+            lv2:index 1 ;
+            lv2:symbol "CutoffFreq" ;
+            lv2:name "Cutoff" ;
+        ] , [
+            lv2:index 2 ;
+            lv2:symbol "Resonance" ;
+            lv2:name "Resonance" ;
+        ] ;
+    ] .
