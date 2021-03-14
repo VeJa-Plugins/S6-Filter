@@ -3,7 +3,6 @@
 
 	VCF_24DB.h
     Author:  Jan Janssen & Jarno Verheesen
-    Source:  http://www.musicdsp.org/showone.php?id=24
 
   ==============================================================================
 */

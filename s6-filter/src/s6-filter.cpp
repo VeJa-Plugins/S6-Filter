@@ -15,7 +15,7 @@
 #include "lv2/lv2plug.in/ns/lv2core/lv2.h"
 
 /**********************************************************************************************************************************************************/
-#define PLUGIN_URI "http://VeJaPlugins.com/plugins/Release/m8vcf"
+#define PLUGIN_URI "http://VeJaPlugins.com/plugins/Release/s6Filter"
 
 #define MAX_PORTS 8
 #define MAX_OUTPUT_BUFFER_LENGHT 256
@@ -43,13 +43,13 @@ enum{
 };
 
 
-class Mars_8{
+class S6_filter{
 public:
-    Mars_8()
+    S6_filter()
     {
 
     }
-    ~Mars_8() {}
+    ~S6_filter() {}
     static LV2_Handle instantiate(const LV2_Descriptor* descriptor, double samplerate, const char* bundle_path, const LV2_Feature* const* features);
     static void activate(LV2_Handle instance);
     static void deactivate(LV2_Handle instance);
@@ -95,12 +95,12 @@ public:
 
 
 /**********************************************************************************************************************************************************/
-LV2_Handle Mars_8::instantiate(const LV2_Descriptor*   descriptor,
+LV2_Handle S6_filter::instantiate(const LV2_Descriptor*   descriptor,
 double                              samplerate,
 const char*                         bundle_path,
 const LV2_Feature* const* features)
 {
-    Mars_8* self = new Mars_8();
+    S6_filter* self = new S6_filter();
 
     //instantiate voltage controlled filters
     self->_voltageControlledFIlter12DB = new VoltageControlledFilter12dB<float>(samplerate);
@@ -109,9 +109,9 @@ const LV2_Feature* const* features)
     return (LV2_Handle)self; 
 }
 /**********************************************************************************************************************************************************/
-void Mars_8::connect_port(LV2_Handle instance, uint32_t port, void *data)
+void S6_filter::connect_port(LV2_Handle instance, uint32_t port, void *data)
 {
-    Mars_8* self = (Mars_8*)instance;
+    S6_filter* self = (S6_filter*)instance;
     switch (port)
     {
         case INPUT:
@@ -141,14 +141,14 @@ void Mars_8::connect_port(LV2_Handle instance, uint32_t port, void *data)
     }
 }
 /**********************************************************************************************************************************************************/
-void Mars_8::activate(LV2_Handle instance)
+void S6_filter::activate(LV2_Handle instance)
 {
 }
 
 /**********************************************************************************************************************************************************/
-void Mars_8::run(LV2_Handle instance, uint32_t n_samples)
+void S6_filter::run(LV2_Handle instance, uint32_t n_samples)
 {
-    Mars_8* self = (Mars_8*)instance;
+    S6_filter* self = (S6_filter*)instance;
     uint8_t order = *self->slope;
     float freq  = *self->cutofffreq;
     float res = *self->resonance;
@@ -211,25 +211,25 @@ void Mars_8::run(LV2_Handle instance, uint32_t n_samples)
 }   
 
 /**********************************************************************************************************************************************************/
-void Mars_8::deactivate(LV2_Handle instance)
+void S6_filter::deactivate(LV2_Handle instance)
 {
     // TODO: include the deactivate function code here
 }
 /**********************************************************************************************************************************************************/
-void Mars_8::cleanup(LV2_Handle instance)
+void S6_filter::cleanup(LV2_Handle instance)
 {
-  delete ((Mars_8 *) instance); 
+  delete ((S6_filter *) instance); 
 }
 /**********************************************************************************************************************************************************/
 static const LV2_Descriptor Descriptor = {
     PLUGIN_URI,
-    Mars_8::instantiate,
-    Mars_8::connect_port,
-    Mars_8::activate,
-    Mars_8::run,
-    Mars_8::deactivate,
-    Mars_8::cleanup,
-    Mars_8::extension_data
+    S6_filter::instantiate,
+    S6_filter::connect_port,
+    S6_filter::activate,
+    S6_filter::run,
+    S6_filter::deactivate,
+    S6_filter::cleanup,
+    S6_filter::extension_data
 };
 /**********************************************************************************************************************************************************/
 LV2_SYMBOL_EXPORT
@@ -239,7 +239,7 @@ const LV2_Descriptor* lv2_descriptor(uint32_t index)
     else return NULL;
 }
 /**********************************************************************************************************************************************************/
-const void* Mars_8::extension_data(const char* uri)
+const void* S6_filter::extension_data(const char* uri)
 {
     return NULL;
 }

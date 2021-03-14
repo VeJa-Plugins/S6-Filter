@@ -10,14 +10,14 @@
 @prefix midi: <http://lv2plug.in/ns/ext/midi#> .
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 
-<http://VeJaPlugins.com/plugins/Release/m8vcf> 
+<http://VeJaPlugins.com/plugins/Release/s6Filter> 
 a lv2:Plugin, mod:ControlVoltagePlugin;
 lv2:requiredFeature urid:map ;
 
-doap:name "M8 VCF";
+doap:name "S6 Filter";
 
 doap:developer [
-    foaf:name "Jarno & Jan";
+    foaf:name "VeJa Plugins";
     foaf:homepage <>;
     foaf:mbox <mailto:jan@moddevices.com>;
     ];

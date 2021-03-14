@@ -1,5 +1,5 @@
 
-NAME = m8-vcf
+NAME = s6-filter
 
 # installation path
 INSTALL_PATH = /usr/local/lib/lv2

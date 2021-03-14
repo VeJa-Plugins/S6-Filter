@@ -3,7 +3,7 @@
 set -e
 
 list_bundles() {
-    echo "m8-vcf.lv2"
+    echo "s6-filter.lv2"
 }
 
 if [ "x${1}x" == "x-lx" ]; then
@@ -15,7 +15,7 @@ if [ "x${LV2_PATH}x" == "xx" ]; then
     LV2_PATH=~/.lv2/
 fi
 
-for i in m8-vcf; do
+for i in s6-filter; do
     cd $i
     make clean
     make
