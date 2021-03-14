@@ -32,7 +32,13 @@ doap:maintainer [
     lv2:microVersion 1;
 
 rdfs:comment """
-CV module that contains the VCF used inside the Mars-8 project
+CV module that contains the Filter used inside the Saturn-6 project
+
+The plugin consists of 2 different filters, one with a 12dB slope and one with a 24dB slope. 
+
+The 12dB filter can be used in different modes, while the 24dB filter can only be used on lowpass mode for now.
+
+The filter cutoff frequency can be modulated by inserting a CV signal into the CV MOD input of the plugin
 """;
 
 lv2:port
