@@ -6,7 +6,6 @@
 #include <lv2.h>
 
 #include "VoltageControlledFilter12dB.h"
-#include "VoltageControlledFilter24dB.h"
 
 #include "lv2/lv2plug.in/ns/ext/atom/atom.h"
 #include "lv2/lv2plug.in/ns/ext/atom/util.h"
@@ -37,7 +36,6 @@ enum{
     OUTPUT,
     Resonance,
     CutoffFreq,
-    Slope,
     MOD_C,
     FIRST_ORDER_TYPE
 };
@@ -72,7 +70,6 @@ public:
     //control ports
     float *resonance;
     float *cutofffreq;
-    float *slope;
     float *mod_c;
     float *fot;
 
@@ -82,14 +79,9 @@ public:
 
     float prev_resonance;
     float prev_cutofffreq;
-    float prev_order;
 
     //Voltage Controlled Filter 12dB
     VoltageControlledFilter12dB<float> * _voltageControlledFIlter12DB;
-
-    //Voltage Controlled Filter 24dB
-    VoltageControlledFilter24dB<float> * _voltageControlledFIlter24DB;
-
 };
 /**********************************************************************************************************************************************************/
 
@@ -104,7 +96,6 @@ const LV2_Feature* const* features)
 
     //instantiate voltage controlled filters
     self->_voltageControlledFIlter12DB = new VoltageControlledFilter12dB<float>(samplerate);
-    self->_voltageControlledFIlter24DB = new VoltageControlledFilter24dB<float>(samplerate);
 
     return (LV2_Handle)self; 
 }
@@ -129,9 +120,6 @@ void S6_filter::connect_port(LV2_Handle instance, uint32_t port, void *data)
         case CutoffFreq:
             self->cutofffreq = (float*) data;
             break;
-        case Slope:
-            self->slope = (float*) data;
-            break;
         case MOD_C:
             self->mod_c = (float*) data;
             break;
@@ -149,7 +137,6 @@ void S6_filter::activate(LV2_Handle instance)
 void S6_filter::run(LV2_Handle instance, uint32_t n_samples)
 {
     S6_filter* self = (S6_filter*)instance;
-    uint8_t order = *self->slope;
     float freq  = *self->cutofffreq;
     float res = *self->resonance;
     float mod_control = *self->mod_c;
@@ -178,18 +165,10 @@ void S6_filter::run(LV2_Handle instance, uint32_t n_samples)
     if (res < 0) res = 0.01f;
     if (res > 0.99) res = 0.99f;
 
-    if ((res != self->prev_resonance) || (fc != self->prev_cutofffreq) || (order != self->prev_order))
+    if ((res != self->prev_resonance) || (fc != self->prev_cutofffreq))
     {
-    	if (order == 0)
-    	{
-    		self->_voltageControlledFIlter12DB->SetCoefficient(fc, res);
-    	}
-    	else 
-    	{
-    		self->_voltageControlledFIlter24DB->SetCoefficient(fc, res);
-    	}
+    	self->_voltageControlledFIlter12DB->SetCoefficient(fc, res);
 
-    	self->prev_order = order;
     	self->prev_resonance = res;
     	self->prev_cutofffreq = fc;
     }
@@ -197,16 +176,7 @@ void S6_filter::run(LV2_Handle instance, uint32_t n_samples)
   	////start audio processing
     for(uint32_t i = 0; i < n_samples; i++)
     {
-        //12 db
-        if (order == 0)
-        {
-            self->output[i] = self->_voltageControlledFIlter12DB->Process(self->input[i], *self->fot);
-        }
-        //24 db
-        else 
-        {
-            self->output[i] = 3.0f * (self->_voltageControlledFIlter24DB->Process(self->input[i]));
-        }
+        self->output[i] = self->_voltageControlledFIlter12DB->Process(self->input[i], *self->fot);
     }
 }   
 

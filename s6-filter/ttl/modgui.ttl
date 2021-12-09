@@ -9,11 +9,11 @@
         modgui:screenshot <modgui/screenshot-s6-filter.png> ;
         modgui:thumbnail <modgui/thumbnail-s6-filter.png> ;
         modgui:brand "VeJa" ;
-        modgui:label "S6 Filtlter" ;
+        modgui:label "S6 Filter" ;
         modgui:model "boxy" ;
-        modgui:panel "1-select-2-knobs" ;
+        modgui:panel "1-select-3-knobs" ;
         modgui:color "black" ;
-        modgui:knob "purple" ;
+        modgui:knob "green" ;
         modgui:port [
             lv2:index 0 ;
             lv2:symbol "FIRST_ORDER_TYPE" ;
@@ -21,10 +21,14 @@
         ] , [
             lv2:index 1 ;
             lv2:symbol "CutoffFreq" ;
-            lv2:name "Cutoff" ;
+            lv2:name "Cutoff " ;
         ] , [
             lv2:index 2 ;
             lv2:symbol "Resonance" ;
-            lv2:name "Resonance" ;
+            lv2:name "Res" ;
+        ] , [
+            lv2:index 3 ;
+            lv2:symbol "MOD_C" ;
+            lv2:name "VC Mod" ;
         ] ;
     ] .
